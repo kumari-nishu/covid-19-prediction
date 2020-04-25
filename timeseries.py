@@ -15,7 +15,7 @@ def forecast(time_series, beds, agegroups, forecast_days):
     gamma = 1.0 / 9.0
     sigma = 1.0 / 3.0
 
-    outbreak_shift = 30  # let's try 30, 1, 20?
+    outbreak_shift = 30 # let's try 30, 1, 20?
 
     if outbreak_shift >= 0:
         y_data = np.concatenate((np.zeros(outbreak_shift), time_series))
@@ -83,6 +83,11 @@ def forecast(time_series, beds, agegroups, forecast_days):
     params = mod.make_params()
     result = mod.fit(y_data, params, method="least_squares", x=x_data)
     forecast_values = Model(int(y_data.shape[0] + forecast_days), agegroups, beds, **result.best_values)[6]
+    print(forecast_values)
+    print(y_data)
+
+    result.plot_fit(datafmt="-", ax=1, show_init=True)
+    plt.show()
 
     return forecast_values[-forecast_days:]
 
@@ -118,45 +123,49 @@ if __name__ == '__main__':
     recovered['region'] = list(zip(recovered['Country/Region'], recovered['Province/State']))
 
     drop_cols = ['Country/Region', 'Province/State', 'Lat', 'Long', '1/22/20', '1/23/20', '1/24/20',
-                 '1/25/20', '1/26/20', '1/27/20', '1/28/20', '1/29/20', '1/30/20', '1/31/20']
+                 '1/25/20', '1/26/20', '1/27/20', '1/28/20', '1/29/20', '1/30/20', '1/31/20',
+                 '4/16/20', '4/17/20', '4/18/20', '4/19/20']
     cases.drop(drop_cols, axis=1, inplace=True)
     deaths.drop(drop_cols, axis=1, inplace=True)
     recovered.drop(drop_cols, axis=1, inplace=True)
 
     # forecasting for cases, deaths, recovered
-    # forecasted_values = []
-    # for x in range(len(cases)):
-    #     ts = np.asarray(cases.iloc[x, :-1]).astype('float64')
-    #     if cases.iloc[x, -1][0] not in beds_lookup.keys():
-    #         beds = 4.0      # approximate default value
-    #     else:
-    #         beds = beds_lookup[cases.iloc[x, -1][0]]
-    #
-    #     if cases.iloc[x, -1][0] not in agegroups_lookup.keys():
-    #         # fallback option - 1M as total population of a country
-    #         agegroups = [100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000]
-    #     else:
-    #         agegroups = agegroups_lookup[cases.iloc[x, -1][0]]
-    #
-    #     y_pred = forecast(ts, beds, agegroups, forecast_days=3)
-    #     forecasted_values.append(y_pred)
-    #     print('Forecasts Complete:',x)
+    forecasted_values = []
+    for x in range(225, 226):
+        print(cases.iloc[x, -1])
+        ts = np.asarray(cases.iloc[x, :-1]).astype('float64')
+        if cases.iloc[x, -1][0] not in beds_lookup.keys():
+            beds = 4.0      # approximate default value
+        else:
+            beds = beds_lookup[cases.iloc[x, -1][0]]
+
+        if cases.iloc[x, -1][0] not in agegroups_lookup.keys():
+            # fallback option - 1M as total population of a country
+            agegroups = [100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000]
+        else:
+            agegroups = agegroups_lookup[cases.iloc[x, -1][0]]
+
+        y_pred = forecast(ts, beds, agegroups, forecast_days=7)
+        forecasted_values.append(y_pred)
+        print('Forecasts Complete:',x)
 
     # print(forecasted_values)
-    # pd.DataFrame(forecasted_values, columns=['day1', 'day2', 'day3']).to_csv('cases_forecast_3days.csv')
-
-    cases_forecast = pd.concat([cases, pd.read_csv('cases_forecast_3days.csv', index_col=0)], axis=1)
-
-    cases_latest = pd.read_csv('time_series_covid19_confirmed_global_latest.csv')
-    cases_latest.fillna('None', inplace=True)
-
-    print('Score for Apr 21 Cases Forecast: ',scorer(list(cases_forecast.day1), list(cases_latest.iloc[:,-2])))
-    print('Score for Apr 22 Cases Forecast: ',scorer(list(cases_forecast.day2), list(cases_latest.iloc[:,-1])))
-
-    print('\nScore for Apr 21 Cases Forecast (>100 Condition): ',scorer_100(list(cases_forecast.day1), list(cases_latest.iloc[:,-2])))
-    print('Score for Apr 22 Cases Forecast (>100 Condition): ',scorer_100(list(cases_forecast.day2), list(cases_latest.iloc[:,-1])))
-
-    # forecasted_values = []
+    # pd.DataFrame(forecasted_values, columns=['day1', 'day2', 'day3', 'day4', 'day5', 'day6', 'day7']).to_csv('cases_forecast_7days.csv')
+    #
+    # cases_forecast = pd.concat([cases, pd.read_csv('cases_forecast_7days.csv', index_col=0)], axis=1)
+    #
+    # cases_latest = pd.read_csv('time_series_covid19_confirmed_global_latest.csv')
+    # cases_latest.fillna('None', inplace=True)
+    #
+    # print('\nScore for Apr 16 Cases Forecast (>100 Condition): ',scorer_100(list(cases_forecast.day1), list(cases_latest.iloc[:,-7])))
+    # print('Score for Apr 17 Cases Forecast (>100 Condition): ',scorer_100(list(cases_forecast.day2), list(cases_latest.iloc[:,-6])))
+    # print('Score for Apr 18 Cases Forecast (>100 Condition): ',scorer_100(list(cases_forecast.day3), list(cases_latest.iloc[:,-5])))
+    # print('Score for Apr 19 Cases Forecast (>100 Condition): ',scorer_100(list(cases_forecast.day4), list(cases_latest.iloc[:,-4])))
+    # print('Score for Apr 20 Cases Forecast (>100 Condition): ',scorer_100(list(cases_forecast.day5), list(cases_latest.iloc[:,-3])))
+    # print('Score for Apr 21 Cases Forecast (>100 Condition): ',scorer_100(list(cases_forecast.day6), list(cases_latest.iloc[:,-2])))
+    # print('Score for Apr 22 Cases Forecast (>100 Condition): ',scorer_100(list(cases_forecast.day7), list(cases_latest.iloc[:,-1])))
+    #
+    # # forecasted_values = []
     # for x in range(len(deaths)):
     #     ts = np.asarray(deaths.iloc[x, :-1]).astype('float64')
     #     if deaths.iloc[x, -1][0] not in beds_lookup.keys():
@@ -170,25 +179,26 @@ if __name__ == '__main__':
     #     else:
     #         agegroups = agegroups_lookup[deaths.iloc[x, -1][0]]
     #
-    #     y_pred = forecast(ts, beds, agegroups, forecast_days=3)
+    #     y_pred = forecast(ts, beds, agegroups, forecast_days=7)
     #     forecasted_values.append(y_pred)
     #     print('Forecasts Complete:',x)
     #
     # print(forecasted_values)
-    # pd.DataFrame(forecasted_values, columns=['day1', 'day2', 'day3']).to_csv('deaths_forecast_3days.csv')
-
-    deaths_forecast = pd.concat([cases, pd.read_csv('deaths_forecast_3days.csv', index_col=0)], axis=1)
-
-    deaths_latest = pd.read_csv('time_series_covid19_deaths_global_latest.csv')
-    deaths_latest.fillna('None', inplace=True)
-
-    print('\nScore for Apr 21 Deaths Forecast: ', scorer(list(deaths_forecast.day1), list(deaths_latest.iloc[:, -2])))
-    print('Score for Apr 22 Deaths Forecast: ', scorer(list(deaths_forecast.day2), list(deaths_latest.iloc[:, -1])))
-
-    print('\nScore for Apr 21 Deaths Forecast (>100 Condition): ', scorer_100(list(deaths_forecast.day1), list(deaths_latest.iloc[:, -2])))
-    print('Score for Apr 22 Deaths Forecast (>100 Condition): ', scorer_100(list(deaths_forecast.day2), list(deaths_latest.iloc[:, -1])))
-
+    # pd.DataFrame(forecasted_values, columns=['day1', 'day2', 'day3', 'day4', 'day5', 'day6', 'day7']).to_csv('deaths_forecast_7days.csv')
     #
+    # deaths_forecast = pd.concat([cases, pd.read_csv('deaths_forecast_7days.csv', index_col=0)], axis=1)
+    #
+    # deaths_latest = pd.read_csv('time_series_covid19_deaths_global_latest.csv')
+    # deaths_latest.fillna('None', inplace=True)
+    #
+    # print('\nScore for Apr 16 Deaths Forecast (>100 Condition): ',scorer_100(list(deaths_forecast.day1), list(deaths_latest.iloc[:,-7])))
+    # print('Score for Apr 17 Deaths Forecast (>100 Condition): ',scorer_100(list(deaths_forecast.day2), list(deaths_latest.iloc[:,-6])))
+    # print('Score for Apr 18 Deaths Forecast (>100 Condition): ',scorer_100(list(deaths_forecast.day3), list(deaths_latest.iloc[:,-5])))
+    # print('Score for Apr 19 Deaths Forecast (>100 Condition): ',scorer_100(list(deaths_forecast.day4), list(deaths_latest.iloc[:,-4])))
+    # print('Score for Apr 20 Deaths Forecast (>100 Condition): ',scorer_100(list(deaths_forecast.day5), list(deaths_latest.iloc[:,-3])))
+    # print('Score for Apr 21 Deaths Forecast (>100 Condition): ',scorer_100(list(deaths_forecast.day6), list(deaths_latest.iloc[:,-2])))
+    # print('Score for Apr 22 Deaths Forecast (>100 Condition): ',scorer_100(list(deaths_forecast.day7), list(deaths_latest.iloc[:,-1])))
+
     # # covid_italy_cases = np.asarray(list(zip(*covid_italy))[0])
     # # beds = pd.read_csv('beds.csv', header=0)
     # # beds_lookup = dict(zip(beds["Country"], beds["ICU_Beds"]))
